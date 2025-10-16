@@ -130,8 +130,7 @@ def moving_average(data, window_size):
 # ==================== Policy Gradient Algorithm ====================
 
 def train_policy_gradient(env_name, policy, optimizer, gamma, num_episodes, 
-                         max_steps=None, is_pong=False, action_map=None,
-                         use_moving_avg_baseline=False, baseline_beta=0.95):
+                         max_steps=None, is_pong=False, action_map=None):
     """
     Train policy using REINFORCE algorithm
     
@@ -147,8 +146,6 @@ def train_policy_gradient(env_name, policy, optimizer, gamma, num_episodes,
     """
     env = gym.make(env_name)
     episode_rewards = []
-    # Exponential moving average baseline over episode returns (variance reduction)
-    ema_baseline = 0.0 if use_moving_avg_baseline else None
     
     for episode in range(num_episodes):
         state, _ = env.reset()
@@ -213,17 +210,10 @@ def train_policy_gradient(env_name, policy, optimizer, gamma, num_episodes,
         # Compute returns
         returns = compute_returns(rewards, gamma)
         
-        # If enabled, subtract moving average baseline (EMA over episode returns)
-        # This keeps the REINFORCE gradient unbiased while reducing variance
-        if use_moving_avg_baseline:
-            advantages = returns - ema_baseline
-        else:
-            advantages = returns
-        
         # Compute policy gradient loss
         policy_loss = []
-        for log_prob, A in zip(log_probs, advantages):
-            policy_loss.append(-log_prob * A)
+        for log_prob, R in zip(log_probs, returns):
+            policy_loss.append(-log_prob * R)
         
         # Optimize policy
         optimizer.zero_grad()
@@ -236,12 +226,6 @@ def train_policy_gradient(env_name, policy, optimizer, gamma, num_episodes,
         # Record episode reward
         episode_reward = sum(rewards)
         episode_rewards.append(episode_reward)
-        
-        # Update EMA baseline after each episode using episode's mean return
-        if use_moving_avg_baseline:
-            with torch.no_grad():
-                episode_return_mean = returns.mean().item()
-            ema_baseline = baseline_beta * ema_baseline + (1 - baseline_beta) * episode_return_mean
         
         # Print progress
         if (episode + 1) % 100 == 0:
@@ -257,7 +241,6 @@ def train_policy_gradient(env_name, policy, optimizer, gamma, num_episodes,
                 'policy_state_dict': policy.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'episode_rewards': episode_rewards,
-                'ema_baseline': ema_baseline,
             }, checkpoint_path)
             print(f"  → Checkpoint saved: {checkpoint_path}")
     
@@ -430,8 +413,7 @@ def train_pong():
     print("Starting training (checkpoints saved every 500 episodes)...\n")
     episode_rewards = train_policy_gradient(
         'ALE/Pong-v5', policy, optimizer, gamma, num_episodes,
-        is_pong=True, action_map=action_map,
-        use_moving_avg_baseline=True, baseline_beta=0.95
+        is_pong=True, action_map=action_map
     )
     
     print("\nTraining completed!")
