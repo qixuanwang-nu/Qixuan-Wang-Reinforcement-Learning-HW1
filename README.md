@@ -1,307 +1,267 @@
-# Reinforcement Learning: Policy Gradient with Baselines
+# Reinforcement Learning Homework 1: Policy Gradient Methods
 
-Implementation of REINFORCE and Actor-Critic algorithms for CartPole-v1 and Pong-v5 environments, demonstrating variance reduction through baseline methods.
+This repository implements REINFORCE policy gradient algorithm with and without baseline for CartPole-v1 and Pong-v5 environments.
 
----
+## Overview
 
-## 📋 Problem Statement
-
-Implement policy gradient algorithms to learn control policies for:
-- **CartPole-v1**: Balance a pole on a moving cart
-- **Pong-v5**: Play Atari Pong against AI opponent
-
-**Requirements**:
-1. Part 1: Train using basic REINFORCE algorithm
-2. Part 2: Add baseline for variance reduction and compare results
+We implement the basic policy gradient algorithm (REINFORCE) and demonstrate variance reduction through baseline subtraction. Two environments are explored:
+- **CartPole-v1**: Classic control task with 4-dimensional state space
+- **Pong-v5**: Atari game with visual input (80×80 preprocessed frames)
 
 ---
 
-## 🎯 Part 1: REINFORCE (No Baseline)
+## Part 1: REINFORCE without Baseline
 
-### CartPole-v1 (`cartpole.py`)
+### CartPole-v1
 
-**Hyperparameters**:
-- Discount factor γ = 0.95
-- Learning rate = 0.01
-- Episodes = 1000
-- Architecture: State(4) → FC(128) → FC(2)
+**Implementation**: `cartpole.py`
 
-**Results** (`cartpole_results.png`):
-- **Mean Reward**: 492.96 / 500 (98.6% success rate)
-- **Std Deviation**: 16.55
-- **Analysis**: Achieves near-optimal performance with high variance
+- **Network**: 2-layer MLP (4 → 128 → 2)
+- **Hyperparameters**: γ=0.95, lr=0.01, 1000 episodes
+- **Training**: REINFORCE with normalized returns
+- **Results**: Mean reward **492.96**, Std **16.55**
 
-![CartPole Results](cartpole_results.png)
+![CartPole Training](cartpole_results.png)
 
-### Pong-v5 (`pong.py`)
-
-**Hyperparameters**:
-- Discount factor γ = 0.99
-- Learning rate = 0.001
-- Episodes = 1000
-- Architecture: Conv(80×80) → Conv → FC(256) → FC(2)
-- Frame preprocessing + motion detection via frame differencing
-
-**Results** (`pong_results.png`):
-- **Mean Reward**: 3.27
-- **Std Deviation**: 4.19
-- **Analysis**: Learns to compete but with high variance in outcomes
-
-![Pong Results](pong_results.png)
+The agent successfully learns to balance the pole, achieving near-maximum performance (500 timesteps) with high consistency.
 
 ---
 
-## 🎯 Part 2: Policy Gradient with Baseline
+### Pong-v5
+
+**Implementation**: `pong.py`
+
+- **Network**: CNN architecture (Conv → Conv → FC → FC)
+- **Input**: 80×80 preprocessed frames with frame differencing for motion
+- **Actions**: RIGHT(2) and LEFT(3) only
+- **Hyperparameters**: γ=0.99, lr=0.001, 1000 episodes
+- **Preprocessing**: Crop, downsample, binarize (provided function)
+- **Training**: REINFORCE with normalized returns and gradient clipping
+- **Results**: Mean reward **3.27**, Std **4.19**
+
+![Pong Training](pong_results.png)
+
+The agent learns to play Pong, improving from initial performance of -21 (losing every game) to positive scores around +3, demonstrating successful learning despite high variance.
+
+---
+
+## Part 2: REINFORCE with Baseline
 
 ### Baseline Choice: **Learned Value Function V(s) - Actor-Critic**
 
-We implemented a **state-dependent baseline** using a separate critic network that learns V(s), the expected return from each state. This provides maximum variance reduction while keeping gradients unbiased.
+We implement a **state-dependent value function baseline** using separate critic networks that learn to estimate V(s), the expected return from each state. This provides maximum variance reduction while keeping gradient estimates unbiased.
 
 **Mathematical Foundation**:
 ```
-Standard REINFORCE:     ∇J = E[∇log π(a|s) · G_t]              [high variance]
-With Baseline:          ∇J = E[∇log π(a|s) · (G_t - V(s))]    [reduced variance]
-                            = E[∇log π(a|s) · A(s,a)]          [advantage function]
+Standard REINFORCE:     ∇J = E[Σ log π(a|s) · G_t]
+With Baseline:          ∇J = E[Σ log π(a|s) · (G_t - V(s))]
+                            = E[Σ log π(a|s) · A(s,a)]
 ```
+
+The advantage A(s,a) = G_t - V(s) captures how much better an action is compared to the expected value, significantly reducing variance.
 
 ---
 
-## 🤖 CartPole-v1 with Baseline (`cartpole_baseline.py`)
+### CartPole-v1 with Baseline
 
-### Implementation
+**Implementation**: `cartpole_baseline.py`
 
 **Architecture**:
 - **Actor (Policy)**: State(4) → FC(128) → FC(2) → Softmax
 - **Critic (Value)**: State(4) → FC(128) → FC(1) → V(s)
 
 **Algorithm**:
-1. Collect episode trajectory (s_t, a_t, r_t)
-2. Compute returns: G_t = Σ γ^k r_{t+k}
-3. Compute advantages: **A_t = G_t - V(s_t)**
-4. Normalize advantages: A_t' = (A_t - mean) / std
-5. Update policy: minimize -log π(a_t|s_t) · A_t'
-6. Update critic: minimize MSE(V(s_t), G_t)
-7. Use separate Adam optimizers for actor and critic
+1. Collect trajectory using stochastic policy
+2. Compute returns G_t (discounted rewards)
+3. Compute advantages: A_t = G_t - V(s_t) with critic detached
+4. Normalize advantages per episode
+5. Update actor with policy gradient: -log π(a|s) · A(s,a)
+6. Update critic with MSE loss: (V(s) - G_t)²
 
-**Key Implementation Details**:
-```python
-# Advantage computation with gradient detachment
-advantages = returns - values.detach()  # Prevents gradient flow to critic
+**Hyperparameters**: Same as Part 1 (γ=0.95, lr=0.01, 1000 episodes)
 
-# Advantage normalization for stability
-advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+**Results**: Mean reward **138.76**, Std **8.18**
 
-# Policy loss (actor)
-policy_loss = -(log_probs * advantages).sum()
-
-# Value loss (critic)
-value_loss = F.mse_loss(values, returns)
-```
-
-### Results (`cartpole_baseline_results.png`)
-
-- **Mean Reward**: 138.76 (vs 492.96 original)
-- **Std Deviation**: 8.18 (vs 16.55 original)
-- **Variance Reduction**: 50% lower std, but performance degraded
-- **Analysis**: Successfully reduces variance but requires hyperparameter tuning for better performance
-
-![CartPole Baseline Results](cartpole_baseline_results.png)
-
-**Observation**: While variance decreased, mean performance dropped due to unstable critic learning. This demonstrates the importance of careful hyperparameter tuning in Actor-Critic methods.
-
----
-
-## 🏓 Pong-v5 with Baseline (`pong_baseline.py`)
-
-### Implementation
-
-**Architecture**:
-- **Actor (Policy CNN)**:
-  - Input: 80×80 frame difference
-  - Conv1: 16 filters, 8×8 kernel, stride 4
-  - Conv2: 32 filters, 4×4 kernel, stride 2
-  - FC: 2048 → 256 → 2 actions
-  - Kaiming (Conv) + Xavier (FC) initialization
-
-- **Critic (Value CNN)**:
-  - Same Conv architecture as actor
-  - FC: 2048 → 256 → 1 value
-  - Separate network (no shared features)
-
-**Algorithm Enhancements** (beyond CartPole):
-1. **Entropy regularization**: +0.01 * H(π) to encourage exploration
-2. **Huber loss** for critic (robust to outlier returns)
-3. **Return normalization** for stable critic targets
-4. **Lower learning rate** (3e-4 vs 1e-3) for stability
-5. **Gradient clipping** (max_norm=1.0) for CNNs
-
-**Key Implementation Details**:
-```python
-# Frame preprocessing and motion detection
-state = preprocess(image)  # 210×160×3 → 80×80 binary
-state_input = cur_frame - prev_frame  # Motion signal
-
-# Advantage with normalization
-advantages = returns - values.detach()
-advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-# Policy loss with entropy bonus
-policy_loss = (-(log_probs * advantages) - 0.01 * entropies).sum()
-
-# Robust value loss
-value_loss = F.smooth_l1_loss(values, returns)
-```
-
-### Results (`pong_baseline_comparison.png`)
-
-| Metric | Original REINFORCE | With Actor-Critic | Improvement |
-|--------|-------------------|-------------------|-------------|
-| **Mean Reward** | 3.27 | 4.55 | +39% |
-| **Std Deviation** | 4.19 | 2.11 | -50% |
-| **Training Variance** | 23.1 | 5.1 | -78% |
+![CartPole with Baseline](cartpole_baseline_results.png)
 
 **Analysis**:
-- ✅ **Smoother training curve**: Baseline reduces episode-to-episode variance
-- ✅ **Better performance**: Mean reward improved by 1.28 points
-- ✅ **More consistent**: 50% reduction in std deviation
-- ✅ **Faster convergence**: Critic provides better learning signal
-
-![Pong Baseline Comparison](pong_baseline_comparison.png)
+- ✅ **Variance reduction**: Std decreased from 16.55 to 8.18 (50% reduction)
+- ⚠️ **Performance trade-off**: Mean reward dropped, suggesting the learning rate is too high for stable critic training
 
 ---
 
-## 📊 Key Results Summary
+### Pong-v5 with Baseline
 
-### Variance Reduction
+**Implementation**: `pong_baseline.py`
 
-Both implementations successfully demonstrate **variance reduction** through baseline subtraction:
+**Architecture**:
+- **Actor (Policy)**: CNN (80×80 → Conv16 → Conv32 → FC256 → FC2)
+- **Critic (Value)**: CNN (80×80 → Conv16 → Conv32 → FC256 → FC1)
 
-| Environment | Original Std | With Baseline Std | Reduction |
-|-------------|--------------|-------------------|-----------|
-| CartPole | 16.55 | 8.18 | 50% |
-| Pong | 4.19 | 2.11 | 50% |
+**Algorithm**: Actor-Critic with enhancements for Atari:
+1. Frame differencing for motion signal (velocity information)
+2. Compute returns and normalize: (G_t - mean) / std
+3. Compute advantages: A_t = G_t - V(s_t) with critic detached
+4. Normalize advantages per episode
+5. Policy loss with entropy bonus: -log π(a|s) · A - 0.01 · H(π)
+6. Value loss with Huber (Smooth L1): robust to outlier returns
 
-### Why Learned Baseline Works
+**Key Improvements**:
+- **Entropy regularization** (β=0.01): Prevents premature convergence
+- **Huber loss**: More robust to noisy Monte-Carlo targets
+- **Lower learning rate** (3e-4): Stabilizes critic learning
+- **Return normalization**: Stabilizes value function targets
+- **Gradient clipping**: Prevents exploding gradients in CNNs
 
-**Intuition**: Instead of using raw returns G_t (noisy), we use advantages A_t = G_t - V(s_t):
-- V(s_t) captures "how good is this state on average"
-- A_t captures "how much better/worse was this action than expected"
-- This removes state-dependent variance while keeping gradient unbiased
+**Hyperparameters**: γ=0.99, lr=0.0003, entropy coeff=0.01, 1000 episodes
 
-**Mathematical Proof**:
-```
-E[∇log π(a|s) · V(s)] = V(s) · E[∇log π(a|s)] 
-                      = V(s) · ∇E[π(a|s)]
-                      = V(s) · ∇1 = 0
-```
-Subtracting V(s) doesn't bias the gradient but reduces variance!
+**Results**: Mean reward **4.55**, Std **2.11**
+
+![Pong with Baseline Comparison](pong_baseline_comparison.png)
+
+**Analysis**:
+- ✅ **Variance reduction**: Std decreased from 4.19 to 2.11 (50% reduction)
+- ✅ **Performance improvement**: Mean increased from 3.27 to 4.55 (+39%)
+- ✅ **Smoother training**: 75% reduction in episode-to-episode variance
+- ✅ **More stable policy**: Consistent behavior during evaluation
 
 ---
 
-## 🛠️ Implementation Details
+## Key Findings
 
-### Files Structure
+### Variance Reduction Mechanism
 
-**Core Implementations**:
-- `cartpole.py` - REINFORCE for CartPole
-- `cartpole_baseline.py` - Actor-Critic for CartPole
-- `pong.py` - REINFORCE for Pong (includes moving avg baseline option)
-- `pong_baseline.py` - Actor-Critic for Pong
+The learned baseline V(s) reduces variance because:
+1. **State-dependent**: Different baseline for different states (unlike constant baseline)
+2. **Captures expected value**: V(s) ≈ E[G_t | s], so advantage A = G_t - V(s) has lower variance
+3. **Unbiased**: E[∇log π(a|s) · V(s)] = 0, so subtracting V(s) doesn't bias the gradient
 
-**Results & Plots**:
-- `cartpole_results.png` - Original CartPole training & evaluation
-- `cartpole_baseline_results.png` - CartPole with baseline
-- `pong_results.png` - Original Pong training & evaluation
-- `pong_baseline_comparison.png` - Side-by-side Pong comparison
+### CartPole vs Pong
 
-**Documentation**:
-- `README.md` - This file
-- `SUMMARY_BASELINE_IMPLEMENTATIONS.md` - Detailed technical summary
-- `PONG_BASELINE_ANALYSIS.md` - In-depth Pong baseline analysis
-- `PART2_BASELINE_EXPLANATION.md` - CartPole baseline explanation
+| Environment | Original Mean | Original Std | Baseline Mean | Baseline Std | Variance Reduction |
+|-------------|---------------|--------------|---------------|--------------|-------------------|
+| CartPole    | 492.96        | 16.55        | 138.76        | 8.18         | 50%               |
+| Pong        | 3.27          | 4.19         | 4.55          | 2.11         | 50%               |
 
-**Trained Models**:
-- `cartpole_policy.pth` - Trained CartPole policy
-- `cartpole_baseline_policy.pth` - Trained CartPole actor-critic
-- `pong_policy.pth` - Trained Pong policy
-- `pong_baseline_policy.pth` - Trained Pong actor-critic
-- `pong_checkpoint_ep*.pth` - Training checkpoints
+**Key Observations**:
+- Both environments show significant variance reduction (~50%)
+- Pong baseline maintains/improves performance with proper stabilization
+- CartPole baseline needs hyperparameter tuning (lower critic LR) to match original performance
+- Variance reduction is consistent across environments, validating the baseline approach
+
+### Why Actor-Critic Baseline?
+
+**Advantages**:
+- Maximum variance reduction through state-dependent baseline
+- Better credit assignment (critic learns which states are valuable)
+- Foundation for modern algorithms (A3C, PPO, SAC)
+- Particularly effective for high-variance environments (like Atari)
+
+**Trade-offs**:
+- More complex (2 networks, 2 optimizers)
+- Requires careful hyperparameter tuning
+- Critic must learn accurate V(s) for good advantages
+
+---
+
+## Implementation Details
+
+### Preprocessing (Pong)
+
+Following the provided preprocessing function:
+```python
+def preprocess(image):
+    image = image[35:195]           # Crop to game area
+    image = image[::2, ::2, 0]      # Downsample by 2, extract red channel
+    image[image == 144] = 0         # Erase background type 1
+    image[image == 109] = 0         # Erase background type 2
+    image[image != 0] = 1           # Binarize (paddles and ball)
+    return image.reshape([80, 80])  # 80×80 frame
+```
+
+Frame differencing captures motion:
+```python
+state_input = current_frame - previous_frame
+```
+
+### Network Initialization
+
+- **CartPole**: Xavier initialization for fully connected layers
+- **Pong**: Kaiming initialization for Conv layers, Xavier for FC layers
+- Proper initialization critical for training stability
+
+### Optimization
+
+- **Optimizer**: Adam (adaptive learning rates)
+- **Gradient clipping**: max_norm=1.0 for Pong (prevents exploding gradients)
+- **Separate optimizers**: Independent learning for actor and critic
+
+---
+
+## Files
+
+### Implementations
+- `cartpole.py` - CartPole with REINFORCE
+- `cartpole_baseline.py` - CartPole with Actor-Critic baseline
+- `pong.py` - Pong with REINFORCE
+- `pong_baseline.py` - Pong with Actor-Critic baseline
+
+### Results
+- `cartpole_results.png` - CartPole training curve and evaluation histogram
+- `cartpole_baseline_results.png` - CartPole with baseline results
+- `pong_results.png` - Pong training curve and evaluation histogram
+- `pong_baseline_comparison.png` - Pong original vs baseline comparison
+
+### Models
+- `pong_policy.pth` - Final trained Pong policy (1000 episodes)
 
 ### Dependencies
+- `requirements.txt` - Python package requirements
 
+---
+
+## Usage
+
+### Setup
 ```bash
-pip install torch numpy gymnasium matplotlib ale-py
+pip install -r requirements.txt
 ```
 
-See `requirements.txt` for specific versions.
-
-### Running the Code
-
+### Train CartPole
 ```bash
-# CartPole - Original
-python cartpole.py
+python cartpole.py                  # Original REINFORCE
+python cartpole_baseline.py         # With Actor-Critic baseline
+```
 
-# CartPole - With Baseline
-python cartpole_baseline.py
-
-# Pong - Original (requires time, ~hours)
-python pong.py
-
-# Pong - With Baseline (requires time, ~hours)
-python pong_baseline.py
+### Train Pong
+```bash
+python pong.py                      # Original REINFORCE (takes hours)
+python pong_baseline.py             # With Actor-Critic baseline (takes hours)
 ```
 
 ---
 
-## 🔬 Technical Insights
+## Requirements
 
-### Why Actor-Critic for Pong?
+- Python 3.8+
+- PyTorch 2.0+
+- Gymnasium (OpenAI Gym successor)
+- ALE-Py (Atari Learning Environment)
+- NumPy, Matplotlib
 
-**Pong Challenges**:
-- Sparse rewards (+1/-1 only at game end)
-- Long episodes (1000+ timesteps)
-- High-dimensional visual state (80×80 images)
-- Delayed credit assignment
-
-**How Baseline Helps**:
-- **V(s) learns game state value**: Leading 10-5 → V≈+8, Losing 3-15 → V≈-10
-- **Advantages reduce noise**: Only captures action quality, not state quality
-- **Better credit assignment**: Critic provides denser feedback than sparse outcomes
-
-### Implementation Best Practices
-
-1. **Gradient Detachment**: Always use `.detach()` on V(s) when computing advantages
-2. **Normalization**: Normalize both returns (critic targets) and advantages (policy weights)
-3. **Separate Optimizers**: Actor and critic should have independent Adam optimizers
-4. **Learning Rate**: Critic often needs lower LR than actor for stability
-5. **Entropy Bonus**: Prevents premature convergence in complex environments
-6. **Robust Losses**: Use Huber loss for critic in high-variance settings
+See `requirements.txt` for complete dependencies.
 
 ---
 
-## 📚 References
+## Conclusion
 
-- **REINFORCE**: Williams, R. J. (1992). "Simple statistical gradient-following algorithms for connectionist reinforcement learning"
-- **Actor-Critic**: Sutton & Barto (2018). "Reinforcement Learning: An Introduction"
-- **Advantage Functions**: Schulman et al. (2015). "High-Dimensional Continuous Control Using Generalized Advantage Estimation"
+This project demonstrates that **baseline subtraction is an effective variance reduction technique** for policy gradient methods:
 
----
+1. ✅ Learned value function V(s) provides state-dependent baseline
+2. ✅ Advantages A(s,a) = G_t - V(s) have significantly lower variance than returns
+3. ✅ 50% variance reduction achieved in both CartPole and Pong
+4. ✅ Unbiased gradient estimates maintained (proven mathematically)
+5. ✅ With proper stabilization, performance can improve alongside variance reduction
 
-## 🎓 Learning Outcomes
-
-This project demonstrates:
-- ✅ Implementation of policy gradient algorithms (REINFORCE)
-- ✅ Variance reduction through baseline subtraction
-- ✅ Actor-Critic architecture for value function learning
-- ✅ Handling visual inputs with CNNs for Atari games
-- ✅ Stabilization techniques for deep RL (entropy, normalization, clipping)
-- ✅ Empirical evaluation with proper metrics and visualizations
-
-**Key Takeaway**: Baselines are essential for sample-efficient policy gradient learning. While they add complexity, the variance reduction enables faster and more stable training, especially in high-dimensional environments.
-
----
-
-## 📧 Contact
-
-For questions about this implementation, please refer to the detailed documentation in `SUMMARY_BASELINE_IMPLEMENTATIONS.md` and `PONG_BASELINE_ANALYSIS.md`.
+The Actor-Critic architecture is fundamental to modern deep RL, forming the basis of algorithms like A3C, A2C, PPO, and TRPO. Understanding variance reduction through baselines is essential for building sample-efficient reinforcement learning systems.
 
