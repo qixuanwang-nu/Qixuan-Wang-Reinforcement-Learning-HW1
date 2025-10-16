@@ -67,9 +67,9 @@ pip install -r requirements.txt
 
 **Hyperparameters**: γ=0.99, lr=0.0003, entropy bonus=0.01
 
-**Results**: Mean reward 4.55, Std 2.11
-- Variance reduced by 75% in training, 50% in evaluation
-- Performance improved by 39% (3.27 → 4.55)
+**Results**: Mean reward 4.73, Std 2.12
+- Variance reduced by 75% in training, 49% in evaluation
+- Performance improved by 45% (3.27 → 4.73)
 
 ## Results Visualization
 
@@ -96,10 +96,10 @@ pip install -r requirements.txt
 - Evaluation: Mean 3.27, Std 4.19
 
 **With Moving Average Baseline**:
-![Pong with Baseline Comparison](pong_baseline_comparison.png)
+![Pong with Baseline Results](pong_baseline_results.png)
 - Significantly smoother training curve
 - Faster convergence and more stable learning
-- Evaluation: Mean 4.55, Std 2.11
+- Evaluation: Mean 4.73, Std 2.12
 - Demonstrates effective variance reduction while maintaining performance
 
 ## Key Findings
@@ -109,7 +109,7 @@ pip install -r requirements.txt
 | Environment | Baseline Type | Variance Reduction | Performance Change |
 |-------------|---------------|-------------------|-------------------|
 | CartPole | Actor-Critic (V(s)) | ✓ 50% std reduction | ⚠️ Degraded (hyperparameters) |
-| Pong | Moving Average | ✓ 50% std reduction | ✓ +39% improvement |
+| Pong | Moving Average | ✓ 49% std reduction | ✓ +45% improvement |
 
 ### Why Different Baselines?
 
@@ -175,7 +175,7 @@ python pong_baseline.py
 - `cartpole_results.png` - CartPole training and evaluation plots
 - `cartpole_baseline_results.png` - CartPole with baseline plots
 - `pong_results.png` - Pong training and evaluation plots
-- `pong_baseline_comparison.png` - Pong with baseline comparison plots
+- `pong_baseline_results.png` - Pong with baseline plots
 
 ### Model:
 - `pong_policy.pth` - Trained Pong policy weights
