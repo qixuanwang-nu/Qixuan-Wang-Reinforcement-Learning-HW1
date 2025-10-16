@@ -28,8 +28,9 @@ pip install -r requirements.txt
 #### Pong-v5 (`pong.py`)
 - **Algorithm**: REINFORCE with return normalization
 - **Network**: CNN architecture for 80×80 preprocessed frames
-- **Hyperparameters**: γ=0.99, lr=0.001, 1000 episodes
+- **Hyperparameters**: γ=0.99, lr=0.001 (reduced from 0.01 for stability), 1000 episodes
 - **Results**: Mean reward 3.27, Std 4.19
+- **Note**: Lower learning rate (0.001) provides more stable training for visual environments
 
 ### Part 2: REINFORCE with Baseline
 
@@ -65,11 +66,12 @@ pip install -r requirements.txt
 - Policy network: CNN (80×80 → Conv → Conv → FC → 2 actions)
 - Baseline: Single scalar updated with EMA (β=0.95)
 
-**Hyperparameters**: γ=0.99, lr=0.0003, entropy bonus=0.01
+**Hyperparameters**: γ=0.99, lr=0.0003 (further reduced for Actor-Critic stability), entropy bonus=0.01
 
 **Results**: Mean reward 4.73, Std 2.12
 - Variance reduced by 75% in training, 49% in evaluation
 - Performance improved by 45% (3.27 → 4.73)
+- **Note**: Even lower learning rate (0.0003) improves stability for Actor-Critic on Atari
 
 ## Results Visualization
 
