@@ -75,24 +75,28 @@ pip install -r requirements.txt
 
 ### CartPole-v1 Results
 
-**Original REINFORCE** (`cartpole_results.png`):
+**Original REINFORCE**:
+![CartPole Original Results](cartpole_results.png)
 - Training curve shows high variance with episodes reaching maximum reward (500)
 - Evaluation: Mean 492.96, Std 16.55
 - Successfully solves the environment
 
-**With Actor-Critic Baseline** (`cartpole_baseline_results.png`):
+**With Actor-Critic Baseline**:
+![CartPole with Baseline Results](cartpole_baseline_results.png)
 - Smoother training curve with reduced variance
 - Evaluation: Mean 138.76, Std 8.18
 - Variance reduction achieved but performance degraded due to critic instability
 
 ### Pong-v5 Results
 
-**Original REINFORCE** (`pong_results.png`):
+**Original REINFORCE**:
+![Pong Original Results](pong_results.png)
 - Training curve gradually improves from -20 to ~3 over 1000 episodes
 - High variance throughout training
 - Evaluation: Mean 3.27, Std 4.19
 
-**With Moving Average Baseline** (`pong_baseline_comparison.png`):
+**With Moving Average Baseline**:
+![Pong with Baseline Comparison](pong_baseline_comparison.png)
 - Significantly smoother training curve
 - Faster convergence and more stable learning
 - Evaluation: Mean 4.55, Std 2.11
