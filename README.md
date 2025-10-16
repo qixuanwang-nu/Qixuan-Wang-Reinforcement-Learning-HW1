@@ -76,13 +76,13 @@ pip install -r requirements.txt
 ### CartPole-v1 Results
 
 **Original REINFORCE**:
-![CartPole Original Results](cartpole_results.png)
+![CartPole Original Results](plots/cartpole_results.png)
 - Training curve shows high variance with episodes reaching maximum reward (500)
 - Evaluation: Mean 492.96, Std 16.55
 - Successfully solves the environment
 
 **With Actor-Critic Baseline**:
-![CartPole with Baseline Results](cartpole_baseline_results.png)
+![CartPole with Baseline Results](plots/cartpole_baseline_results.png)
 - Smoother training curve with reduced variance
 - Evaluation: Mean 138.76, Std 8.18
 - Variance reduction achieved but performance degraded due to critic instability
@@ -90,13 +90,13 @@ pip install -r requirements.txt
 ### Pong-v5 Results
 
 **Original REINFORCE**:
-![Pong Original Results](pong_results.png)
+![Pong Original Results](plots/pong_results.png)
 - Training curve gradually improves from -20 to ~3 over 1000 episodes
 - High variance throughout training
 - Evaluation: Mean 3.27, Std 4.19
 
 **With Moving Average Baseline**:
-![Pong with Baseline Results](pong_baseline_results.png)
+![Pong with Baseline Results](plots/pong_baseline_results.png)
 - Significantly smoother training curve
 - Faster convergence and more stable learning
 - Evaluation: Mean 4.73, Std 2.12
@@ -171,11 +171,11 @@ python pong_baseline.py
 - `pong.py` - Pong with REINFORCE
 - `pong_baseline.py` - Pong with Moving Average baseline
 
-### Results:
-- `cartpole_results.png` - CartPole training and evaluation plots
-- `cartpole_baseline_results.png` - CartPole with baseline plots
-- `pong_results.png` - Pong training and evaluation plots
-- `pong_baseline_results.png` - Pong with baseline plots
+### Results (in `plots/` folder):
+- `plots/cartpole_results.png` - CartPole training and evaluation plots
+- `plots/cartpole_baseline_results.png` - CartPole with baseline plots
+- `plots/pong_results.png` - Pong training and evaluation plots
+- `plots/pong_baseline_results.png` - Pong with baseline plots
 
 ### Model:
 - `pong_policy.pth` - Trained Pong policy weights
